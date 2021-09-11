@@ -138,6 +138,7 @@ class AgrobotMusic(commands.Cog):
             await ctx.voice_state.voice.move_to(dest)
             return
         ctx.voice_state.voice = await dest.connect()
+        await ctx.guild.change_voice_state(channel=dest, self_deaf=True)
 
     @commands.command(name='leave', aliases=['l'])
     async def _leave(self, ctx: commands.Context):
