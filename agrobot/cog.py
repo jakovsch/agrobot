@@ -56,11 +56,14 @@ class AgrobotMusicState:
             if not self.loop:
                 try:
                     async with async_timeout.timeout(180):
+                        self.current = None
                         self.current = await self.queue.get()
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.stop())
                     self.timeout = True
                     return
+            else:
+                self.current.source.recreate()
 
             self.current.source.volume = self._volume
             self.voice.play(self.current.source, after=self.play_next)
@@ -88,13 +91,16 @@ class AgrobotMusicState:
         info = self.current.content_info
 
         return (discord.Embed(
-                title='Trenutno svira:',
+                title='Trenutno svira [' \
+                     f"{'🔁|' if self.loop else ''}" \
+                     f"{'⏸' if self.voice.is_paused() else '▶'}]:",
                 description=f'```css\n{info.title}\n```',
                 color=discord.Color.blurple())
                 .add_field(name='Trajanje', value=current.duration)
                 .add_field(name='Zatražio', value=current.requester.mention)
                 .add_field(name='Objavio', value=f'[{info.uploader}]({info.uploader_url})')
                 .add_field(name='Link', value=f'[ovdje]({info.url})')
+                .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
                 .set_thumbnail(url=info.thumbnail))
 
 class AgrobotMusic(commands.Cog):
@@ -134,12 +140,12 @@ class AgrobotMusic(commands.Cog):
         ctx.voice_state.voice = await dest.connect()
 
     @commands.command(name='leave', aliases=['l'])
-    @commands.has_permissions(manage_guild=True)
     async def _leave(self, ctx: commands.Context):
         if not ctx.voice_state.voice:
             return await ctx.send('Nisam u kanalu, šta sad?')
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
+        await ctx.message.add_reaction('🆗')
 
     @commands.command(name='volume')
     async def _volume(self, ctx: commands.Context, volume: int):
@@ -150,7 +156,7 @@ class AgrobotMusic(commands.Cog):
             return await ctx.send('Jel znaš ti šta su postotci?')
 
         ctx.voice_state.volume = volume / 100
-        await ctx.send(f'Volumen je sad na {volume}%')
+        await ctx.send(f'Volumen je sad na **{volume}%**')
 
     @commands.command(name='now', aliases=['current', 'playing'])
     async def _now(self, ctx: commands.Context):
@@ -159,21 +165,18 @@ class AgrobotMusic(commands.Cog):
         await ctx.send(embed=ctx.voice_state.create_embed())
 
     @commands.command(name='pause')
-    @commands.has_permissions(manage_guild=True)
     async def _pause(self, ctx: commands.Context):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.message.add_reaction('⏸')
 
     @commands.command(name='resume')
-    @commands.has_permissions(manage_guild=True)
     async def _resume(self, ctx: commands.Context):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             await ctx.message.add_reaction('⏯')
 
     @commands.command(name='stop')
-    @commands.has_permissions(manage_guild=True)
     async def _stop(self, ctx: commands.Context):
         ctx.voice_state.queue.clear()
         if ctx.voice_state.is_playing:
@@ -189,20 +192,19 @@ class AgrobotMusic(commands.Cog):
 
     @commands.command(name='queue', aliases=['q'])
     async def _queue(self, ctx: commands.Context, page: int = 1):
-        if not (l := len(ctx.voice_state.queue)):
-            return await ctx.send('Prazan red čekanja, lmao.')
-
+        l = len(ctx.voice_state.queue)
         items_per_page = 10
-        pages = math.ceil(l / items_per_page)
+        pages = math.ceil(l / items_per_page) or 1
         start = (page - 1) * items_per_page
         end = start + items_per_page
 
-        queue = ''
-        for i, stream in enumerate(ctx.voice_state.queue[start:end], start=start):
-            info = stream.content_info
-            queue += f'`{i+1}.` [**{info.title}**]({info.url})\n'
+        queue = ''.join(
+            f'`{i+1}.` [**{stream.content_info.title}**]({stream.content_info.url})\n'
+            for i, stream in enumerate(ctx.voice_state.queue[start:end], start=start)
+        ) if l else 'Prazan red čekanja, lmao.\n'
 
         embed = (discord.Embed(description=f'**Red čekanja: {l}**\n\n{queue}')
+                .add_field(name='Prethodno:', value=f'"{ctx.voice_state.last or "Ništa"}"')
                 .set_footer(text=f'Gledaš stranicu {page}/{pages}'))
         await ctx.send(embed=embed)
 
@@ -238,14 +240,14 @@ class AgrobotMusic(commands.Cog):
                 await ctx.send(str(e))
             else:
                 stream = AudioStream(source)
-                ctx.voice_state.last = stream.content_info.url
+                ctx.voice_state.last = search
                 await ctx.voice_state.queue.put(stream)
                 await ctx.send(f'Ide glazba: {stream!s}')
 
     @commands.command(name='repeat', aliases=['r'])
     async def _repeat(self, ctx: commands.Context):
         if ctx.voice_state.last:
-            ctx.invoke(self._play, search=ctx.voice_state.last)
+            await ctx.invoke(self._play, search=ctx.voice_state.last)
             await ctx.message.add_reaction('⏮')
 
     @_join.before_invoke

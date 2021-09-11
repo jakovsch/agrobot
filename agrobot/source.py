@@ -15,15 +15,21 @@ class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(
         self,
         ctx: commands.Context,
-        source: discord.FFmpegPCMAudio,
+        url: str,
         content_info: dict,
         volume: float = 0.5
     ):
+        source = discord.FFmpegPCMAudio(url, **ffmpeg_settings)
         super().__init__(source, volume)
 
+        self._url, self._volume = url, volume
         self.requester = ctx.author
         self.channel = ctx.channel
         self.content_info = types.SimpleNamespace(**content_info)
+
+    def recreate(self):
+        source = discord.FFmpegPCMAudio(self._url, **ffmpeg_settings)
+        super().__init__(source, self._volume)
 
     @classmethod
     async def create(
@@ -51,4 +57,4 @@ class YTDLSource(discord.PCMVolumeTransformer):
         if not _process:
             return await cls.create(ctx, data['webpage_url'], loop, _process=True)
 
-        return cls(ctx, discord.FFmpegPCMAudio(data['url'], **ffmpeg_settings), data)
+        return cls(ctx, data['url'], data)
