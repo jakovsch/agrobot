@@ -11,9 +11,10 @@ class AgrobotMusicState:
     def __init__(self, bot: commands.Bot, ctx: commands.Context):
         self.bot, self._ctx = bot, ctx
 
+        self.timeout = False
         self.current = None
         self.voice = None
-        self.timeout = False
+        self.last = None
         self.next = asyncio.Event()
         self.queue = AudioStreamQueue()
 
@@ -145,7 +146,7 @@ class AgrobotMusic(commands.Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.send('Trenutno ništa ne svira...')
 
-        if 0 > volume > 100:
+        if volume not in range(0, 100 + 1):
             return await ctx.send('Jel znaš ti šta su postotci?')
 
         ctx.voice_state.volume = volume / 100
@@ -162,7 +163,7 @@ class AgrobotMusic(commands.Cog):
     async def _pause(self, ctx: commands.Context):
         if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
-            await ctx.message.add_reaction('⏯')
+            await ctx.message.add_reaction('⏸')
 
     @commands.command(name='resume')
     @commands.has_permissions(manage_guild=True)
@@ -210,7 +211,7 @@ class AgrobotMusic(commands.Cog):
         if not len(ctx.voice_state.queue):
             return await ctx.send('Prazan red čekanja, lmao.')
         ctx.voice_state.queue.shuffle()
-        await ctx.message.add_reaction('✅')
+        await ctx.message.add_reaction('🔀')
 
     @commands.command(name='remove')
     async def _remove(self, ctx: commands.Context, index: int = 0):
@@ -224,7 +225,7 @@ class AgrobotMusic(commands.Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.send('Trenutno ništa ne svira...')
         ctx.voice_state.loop = not ctx.voice_state.loop
-        await ctx.message.add_reaction('✅')
+        await ctx.message.add_reaction('🔁' if ctx.voice_state.loop else '▶')
 
     @commands.command(name='play', aliases=['p'])
     async def _play(self, ctx: commands.Context, *, search: str):
@@ -237,8 +238,15 @@ class AgrobotMusic(commands.Cog):
                 await ctx.send(str(e))
             else:
                 stream = AudioStream(source)
+                ctx.voice_state.last = stream.content_info.url
                 await ctx.voice_state.queue.put(stream)
                 await ctx.send(f'Ide glazba: {stream!s}')
+
+    @commands.command(name='repeat', aliases=['r'])
+    async def _repeat(self, ctx: commands.Context):
+        if ctx.voice_state.last:
+            ctx.invoke(self._play, search=ctx.voice_state.last)
+            await ctx.message.add_reaction('⏮')
 
     @_join.before_invoke
     @_play.before_invoke
