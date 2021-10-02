@@ -3,6 +3,7 @@ import discord
 
 from discord.ext import commands
 from agrobot.exceptions import VoiceError, YTDLError
+from agrobot.i18n import Strings
 from agrobot.model import AudioStream, AudioStreamQueue
 from agrobot.source import YTDLSource
 from agrobot.utils import strip_ansi
@@ -92,15 +93,16 @@ class AgrobotMusicState:
         info = self.current.content_info
 
         return (discord.Embed(
-                title='Trenutno svira [' \
+                title=f'{Strings.embed_title} [' \
                      f"{'🔁|' if self.loop else ''}" \
                      f"{'⏸' if self.voice.is_paused() else '▶'}]:",
                 description=f'```\n{info.title}\n```',
                 color=discord.Color.blurple())
-                .add_field(name='Trajanje', value=current.duration)
-                .add_field(name='Zatražio', value=current.requester.mention)
-                .add_field(name='Objavio', value=f'[{info.uploader}]({info.uploader_url})')
-                .add_field(name='Link', value=f'[ovdje]({info.webpage_url})')
+                .add_field(name=Strings.embed_dur, value=current.duration)
+                .add_field(name=Strings.embed_req, value=current.requester.mention)
+                .add_field(name=Strings.embed_pub, value=f'[{info.uploader}]({info.uploader_url})')
+                .add_field(name=Strings.embed_lnk,
+                        value=f'[{Strings.embed_lnk_txt}]({info.webpage_url})')
                 .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
                 .set_thumbnail(url=info.thumbnail))
 
@@ -123,14 +125,14 @@ class AgrobotMusic(commands.Cog):
 
     def cog_check(self, ctx: commands.Context):
         if not ctx.guild:
-            raise commands.NoPrivateMessage('Nemreš ovo koristit u DM-ovima.')
+            raise commands.NoPrivateMessage(Strings.error_no_dm)
         return True
 
     async def cog_before_invoke(self, ctx: commands.Context):
         ctx.voice_state = self.get_voice_state(ctx)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send(f'Eto greške: {error!s}')
+        await ctx.send(f'{Strings.error_generic} {error!s}')
 
     @commands.command(name='join', invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context, channel: discord.VoiceChannel = None):
@@ -144,7 +146,7 @@ class AgrobotMusic(commands.Cog):
     @commands.command(name='leave', aliases=['l'])
     async def _leave(self, ctx: commands.Context):
         if not ctx.voice_state.voice:
-            return await ctx.send('Nisam u kanalu, šta sad?')
+            return await ctx.send(Strings.error_no_bot_voice)
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
         await ctx.message.add_reaction('🆗')
@@ -152,18 +154,18 @@ class AgrobotMusic(commands.Cog):
     @commands.command(name='volume')
     async def _volume(self, ctx: commands.Context, volume: int):
         if not ctx.voice_state.is_playing:
-            return await ctx.send('Trenutno ništa ne svira...')
+            return await ctx.send(Strings.status_not_playing)
 
         if volume not in range(0, 100 + 1):
-            return await ctx.send('Jel znaš ti šta su postotci?')
+            return await ctx.send(Strings.error_int_range)
 
         ctx.voice_state.volume = volume / 100
-        await ctx.send(f'Volumen je sad na **{volume}%**')
+        await ctx.send(f'{Strings.status_volume} **{volume}%**')
 
     @commands.command(name='now', aliases=['current', 'playing'])
     async def _now(self, ctx: commands.Context):
         if not ctx.voice_state.is_playing:
-            return await ctx.send('Trenutno ništa ne svira...')
+            return await ctx.send(Strings.status_not_playing)
         await ctx.send(embed=ctx.voice_state.create_embed())
 
     @commands.command(name='pause')
@@ -188,7 +190,7 @@ class AgrobotMusic(commands.Cog):
     @commands.command(name='skip')
     async def _skip(self, ctx: commands.Context):
         if not ctx.voice_state.is_playing:
-            return await ctx.send('Trenutno ništa ne svira...')
+            return await ctx.send(Strings.status_not_playing)
         ctx.voice_state.skip()
         await ctx.message.add_reaction('⏭')
 
@@ -203,36 +205,36 @@ class AgrobotMusic(commands.Cog):
         queue = ''.join(
             f'`{i+1}.` [**{stream.content_info.title}**]({stream.content_info.webpage_url})\n'
             for i, stream in enumerate(ctx.voice_state.queue[start:end], start=start)
-        ) if l else 'Prazan red čekanja, lmao.\n'
+        ) if l else f'{Strings.queue_empty}\n'
 
         last = ''.join(
             f'[**{info.title}**]({info.webpage_url})'
             for info in [ctx.voice_state.last] if info
         )
 
-        embed = (discord.Embed(description=f'**Red čekanja: {l}**\n{queue}')
-                .add_field(name='Prethodno:', value=f'{last or "Ništa"}')
-                .set_footer(text=f'Gledaš stranicu {page}/{pages}'))
+        embed = (discord.Embed(description=f'**{Strings.queue_title} {l}**\n{queue}')
+                .add_field(name=Strings.queue_prev, value=f'{last or Strings.queue_none}')
+                .set_footer(text=f'{Strings.queue_page} {page}/{pages}'))
         await ctx.send(embed=embed)
 
     @commands.command(name='shuffle')
     async def _shuffle(self, ctx: commands.Context):
         if not len(ctx.voice_state.queue):
-            return await ctx.send('Prazan red čekanja, lmao.')
+            return await ctx.send(Strings.queue_empty)
         ctx.voice_state.queue.shuffle()
         await ctx.message.add_reaction('🔀')
 
     @commands.command(name='remove')
     async def _remove(self, ctx: commands.Context, index: int = 0):
         if not len(ctx.voice_state.queue):
-            return await ctx.send('Prazan red čekanja, lmao.')
+            return await ctx.send(Strings.queue_empty)
         ctx.voice_state.queue.remove(index - 1)
         await ctx.message.add_reaction('✅')
 
     @commands.command(name='loop')
     async def _loop(self, ctx: commands.Context):
         if not ctx.voice_state.is_playing:
-            return await ctx.send('Trenutno ništa ne svira...')
+            return await ctx.send(Strings.status_not_playing)
         ctx.voice_state.loop = not ctx.voice_state.loop
         await ctx.message.add_reaction('🔁' if ctx.voice_state.loop else '▶')
 
@@ -249,7 +251,7 @@ class AgrobotMusic(commands.Cog):
                 stream = AudioStream(source)
                 ctx.voice_state.last = stream.content_info
                 await ctx.voice_state.queue.put(stream)
-                await ctx.send(f'Ide glazba: {stream!s}')
+                await ctx.send(f'{Strings.status_enqueued} {stream!s}')
 
     @commands.command(name='repeat', aliases=['r'])
     async def _repeat(self, ctx: commands.Context):
@@ -276,7 +278,7 @@ class AgrobotMusic(commands.Cog):
     @_play.before_invoke
     async def ensure_voice_state(self, ctx: commands.Context):
         if not ctx.author.voice or not ctx.author.voice.channel:
-            raise commands.CommandError('Nisi u kanalu, šta sad?')
+            raise commands.CommandError(Strings.error_no_user_voice)
         if ctx.voice_client:
             if ctx.voice_client.channel != ctx.author.voice.channel:
-                raise commands.CommandError('Već sam u kanalu.')
+                raise commands.CommandError(Strings.error_in_bot_voice)
