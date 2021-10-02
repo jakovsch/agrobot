@@ -26,7 +26,8 @@ agrobot.add_cog(AgrobotMusic(agrobot))
 
 @agrobot.event
 async def on_ready():
-    print(f'Locale: {LOCALE}\n')
+    print(f'\nVersion: {".".join(map(str, __version__))}')
+    print(f'Locale: {LOCALE}')
     print(f'Logged in as:\n\t{agrobot.user.name}\n\t{agrobot.user.id}\n')
 
 agrobot.run(DISCORDAPI_BOT_TOKEN)
