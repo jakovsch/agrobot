@@ -37,7 +37,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         ctx: commands.Context,
         url: str,
         loop: asyncio.BaseEventLoop = None,
-        _process=False
+        _process=False,
+        _search=False
     ):
         loop = loop or asyncio.get_event_loop()
 
@@ -52,9 +53,19 @@ class YTDLSource(discord.PCMVolumeTransformer):
         if 'entries' in data:
             if not any(data['entries']):
                 raise YTDLError(f'Nothing found matching "{url}" :/')
-            data = functools.reduce(lambda i, j: i or j, data['entries'])
+            if not _search:
+                data = functools.reduce(lambda i, j: i or j, data['entries'])
+            else:
+                data = filter(None, data['entries'])
+                return data
 
         if not _process:
-            return await cls.create(ctx, data['webpage_url'], loop, _process=True)
+            return await cls.create(
+                ctx, data['webpage_url'], loop, _process=True, _search=_search
+            )
+        else:
+            data['webpage_url'] = url
 
         return cls(ctx, data['url'], data)
+
+    search = functools.partialmethod(create, _search=True)

@@ -5,6 +5,7 @@ from discord.ext import commands
 from agrobot.exceptions import VoiceError, YTDLError
 from agrobot.model import AudioStream, AudioStreamQueue
 from agrobot.source import YTDLSource
+from agrobot.utils import strip_ansi
 
 class AgrobotMusicState:
 
@@ -94,12 +95,12 @@ class AgrobotMusicState:
                 title='Trenutno svira [' \
                      f"{'🔁|' if self.loop else ''}" \
                      f"{'⏸' if self.voice.is_paused() else '▶'}]:",
-                description=f'```css\n{info.title}\n```',
+                description=f'```\n{info.title}\n```',
                 color=discord.Color.blurple())
                 .add_field(name='Trajanje', value=current.duration)
                 .add_field(name='Zatražio', value=current.requester.mention)
                 .add_field(name='Objavio', value=f'[{info.uploader}]({info.uploader_url})')
-                .add_field(name='Link', value=f'[ovdje]({info.url})')
+                .add_field(name='Link', value=f'[ovdje]({info.webpage_url})')
                 .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
                 .set_thumbnail(url=info.thumbnail))
 
@@ -200,12 +201,17 @@ class AgrobotMusic(commands.Cog):
         end = start + items_per_page
 
         queue = ''.join(
-            f'`{i+1}.` [**{stream.content_info.title}**]({stream.content_info.url})\n'
+            f'`{i+1}.` [**{stream.content_info.title}**]({stream.content_info.webpage_url})\n'
             for i, stream in enumerate(ctx.voice_state.queue[start:end], start=start)
         ) if l else 'Prazan red čekanja, lmao.\n'
 
-        embed = (discord.Embed(description=f'**Red čekanja: {l}**\n\n{queue}')
-                .add_field(name='Prethodno:', value=f'"{ctx.voice_state.last or "Ništa"}"')
+        last = ''.join(
+            f'[**{info.title}**]({info.webpage_url})'
+            for info in [ctx.voice_state.last] if info
+        )
+
+        embed = (discord.Embed(description=f'**Red čekanja: {l}**\n{queue}')
+                .add_field(name='Prethodno:', value=f'{last or "Ništa"}')
                 .set_footer(text=f'Gledaš stranicu {page}/{pages}'))
         await ctx.send(embed=embed)
 
@@ -231,17 +237,17 @@ class AgrobotMusic(commands.Cog):
         await ctx.message.add_reaction('🔁' if ctx.voice_state.loop else '▶')
 
     @commands.command(name='play', aliases=['p'])
-    async def _play(self, ctx: commands.Context, *, search: str):
+    async def _play(self, ctx: commands.Context, *, string: str):
         if not ctx.voice_state.voice:
             await ctx.invoke(self._join)
         async with ctx.typing():
             try:
-                source = await YTDLSource.create(ctx, search, loop=self.bot.loop)
-            except YTDLError as e:
-                await ctx.send(str(e))
+                source = await YTDLSource.create(ctx, string, loop=self.bot.loop)
+            except Exception as e:
+                await ctx.send(strip_ansi(str(e)))
             else:
                 stream = AudioStream(source)
-                ctx.voice_state.last = search
+                ctx.voice_state.last = stream.content_info
                 await ctx.voice_state.queue.put(stream)
                 await ctx.send(f'Ide glazba: {stream!s}')
 
@@ -250,6 +256,21 @@ class AgrobotMusic(commands.Cog):
         if ctx.voice_state.last:
             await ctx.invoke(self._play, search=ctx.voice_state.last)
             await ctx.message.add_reaction('⏮')
+
+    @commands.command(name='search')
+    async def _search(self, ctx: commands.Context, *, string: str):
+        async with ctx.typing():
+            try:
+                entries = await YTDLSource.search(ctx, string, loop=self.bot.loop)
+            except Exception as e:
+                await ctx.send(strip_ansi(str(e)))
+            else:
+                results = ''.join(
+                    f'`{i+1}.` [**{entry["title"]}**]({entry["url"]})\n'
+                    for i, entry in enumerate(entries)
+                )
+                embed = discord.Embed(description=f'🔎 **"{string}"**\n{results}')
+                await ctx.send(embed=embed)
 
     @_join.before_invoke
     @_play.before_invoke
