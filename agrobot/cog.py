@@ -101,8 +101,7 @@ class AgrobotMusicState:
                 .add_field(name=Strings.embed_dur, value=current.duration)
                 .add_field(name=Strings.embed_req, value=current.requester.mention)
                 .add_field(name=Strings.embed_pub, value=f'[{info.uploader}]({info.uploader_url})')
-                .add_field(name=Strings.embed_lnk,
-                        value=f'[{Strings.embed_lnk_txt}]({info.webpage_url})')
+                .add_field(name=Strings.embed_lnk, value=f'[{Strings.embed_lnk_txt}]({info.url})')
                 .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
                 .set_thumbnail(url=info.thumbnail))
 
@@ -203,12 +202,12 @@ class AgrobotMusic(commands.Cog):
         end = start + items_per_page
 
         queue = ''.join(
-            f'`{i+1}.` [**{stream.content_info.title}**]({stream.content_info.webpage_url})\n'
+            f'`{i+1}.` [**{stream.content_info.title}**]({stream.content_info.url})\n'
             for i, stream in enumerate(ctx.voice_state.queue[start:end], start=start)
         ) if l else f'{Strings.queue_empty}\n'
 
         last = ''.join(
-            f'[**{info.title}**]({info.webpage_url})'
+            f'[**{info.title}**]({info.url})'
             for info in [ctx.voice_state.last] if info
         )
 
@@ -256,7 +255,7 @@ class AgrobotMusic(commands.Cog):
     @commands.command(name='repeat', aliases=['r'])
     async def _repeat(self, ctx: commands.Context):
         if ctx.voice_state.last:
-            await ctx.invoke(self._play, search=ctx.voice_state.last)
+            await ctx.invoke(self._play, search=ctx.voice_state.last.string)
             await ctx.message.add_reaction('⏮')
 
     @commands.command(name='search')

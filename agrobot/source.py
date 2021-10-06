@@ -64,7 +64,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 ctx, data['webpage_url'], loop, _process=True, _search=_search
             )
         else:
-            data['webpage_url'] = url
+            data['string'] = url
 
         return cls(ctx, data['url'], data)
 
