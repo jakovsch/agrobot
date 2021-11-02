@@ -22,5 +22,7 @@ en_EN = {
     'queue_title': 'The Queue:',
     'queue_prev': 'Previous:',
     'queue_page': 'Page',
-    'queue_none': 'Nothing!'
+    'queue_none': 'Nothing!',
+
+    'na': 'Unavailable'
 }

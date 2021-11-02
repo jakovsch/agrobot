@@ -1,9 +1,10 @@
-import asyncio, functools, types
+import asyncio, functools
 import discord, youtube_dl
 
 from discord.ext import commands
 from agrobot.config.settings import ytdl_settings, ffmpeg_settings
 from agrobot.exceptions import YTDLError
+from agrobot.model import AudioStreamInfo
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -25,7 +26,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self._url, self._volume = url, volume
         self.requester = ctx.author
         self.channel = ctx.channel
-        self.content_info = types.SimpleNamespace(**content_info)
+        self.content_info = AudioStreamInfo(**content_info)
 
     def recreate(self):
         source = discord.FFmpegPCMAudio(self._url, **ffmpeg_settings)

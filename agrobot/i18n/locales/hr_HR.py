@@ -22,5 +22,7 @@ hr_HR = {
     'queue_title': 'Red čekanja:',
     'queue_prev': 'Prethodno:',
     'queue_page': 'Gledaš stranicu',
-    'queue_none': 'Ništa'
+    'queue_none': 'Ništa',
+
+    'na': 'Nedostupno'
 }

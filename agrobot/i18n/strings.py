@@ -11,7 +11,4 @@ class Strings:
         type(self).i18n_map = getattr(module, LOCALE, {})
 
     def __getattribute__(self, name):
-        try:
-            return type(self).i18n_map[name]
-        except KeyError:
-            return f'string.{name}'
+        return type(self).i18n_map.get(name, f'string.{name}')

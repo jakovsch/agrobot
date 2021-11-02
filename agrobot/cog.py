@@ -94,14 +94,20 @@ class AgrobotMusicState:
 
         return (discord.Embed(
                 title=f'{Strings.embed_title} [' \
-                     f"{'🔁|' if self.loop else ''}" \
-                     f"{'⏸' if self.voice.is_paused() else '▶'}]:",
-                description=f'```\n{info.title}\n```',
+                    f"{'🔁|' if self.loop else ''}" \
+                    f"{'⏸' if self.voice.is_paused() else '▶'}]:",
+                description=f'```\n{info.title or Strings.na}\n```',
                 color=discord.Color.blurple())
-                .add_field(name=Strings.embed_dur, value=current.duration)
-                .add_field(name=Strings.embed_req, value=current.requester.mention)
-                .add_field(name=Strings.embed_pub, value=f'[{info.uploader}]({info.uploader_url})')
-                .add_field(name=Strings.embed_lnk, value=f'[{Strings.embed_lnk_txt}]({info.url})')
+                .add_field(name=Strings.embed_dur,
+                            value=current.duration or Strings.na)
+                .add_field(name=Strings.embed_req,
+                            value=current.requester.mention or Strings.na)
+                .add_field(name=Strings.embed_pub,
+                            value=f'[{info.uploader}]({info.uploader_url})'
+                            if info.uploader_url else Strings.na)
+                .add_field(name=Strings.embed_lnk,
+                            value=f'[{Strings.embed_lnk_txt}]({info.url})'
+                            if info.url else Strings.na)
                 .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
                 .set_thumbnail(url=info.thumbnail))
 
@@ -255,7 +261,7 @@ class AgrobotMusic(commands.Cog):
     @commands.command(name='repeat', aliases=['r'])
     async def _repeat(self, ctx: commands.Context):
         if ctx.voice_state.last:
-            await ctx.invoke(self._play, search=ctx.voice_state.last.string)
+            await ctx.invoke(self._play, string=ctx.voice_state.last.string)
             await ctx.message.add_reaction('⏮')
 
     @commands.command(name='search')
