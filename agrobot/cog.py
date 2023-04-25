@@ -53,25 +53,35 @@ class AgrobotMusicState:
 
     async def audio_player_task(self):
         while True:
-            self.next.clear()
+            try:
+                self.next.clear()
 
-            if not self.loop:
-                try:
-                    async with async_timeout.timeout(180):
-                        self.current = None
-                        self.current = await self.queue.get()
-                except asyncio.TimeoutError:
-                    self.bot.loop.create_task(self.stop())
-                    self.timeout = True
-                    return
-            else:
-                self.current.source.recreate()
+                if not self.loop:
+                    try:
+                        async with async_timeout.timeout(180):
+                            self.current = None
+                            self.current = await self.queue.get()
+                    except asyncio.TimeoutError:
+                        self.bot.loop.create_task(self.stop())
+                        self.timeout = True
+                        return
+                else:
+                    self.current.source.recreate()
 
-            self.current.source.volume = self._volume
-            self.voice.play(self.current.source, after=self.play_next)
+                self.current.source.volume = self._volume
+                self.voice.play(
+                    self.current.source, after=self.play_next)
 
-            await self.current.source.channel.send(embed=self.create_embed())
-            await self.next.wait()
+                await self.current.source.channel.send(
+                    embed=self.create_embed())
+            except Exception as e:
+                await self.current.source.channel.send(
+                    f'{Strings.error_generic} {e!s}')
+                self.bot.loop.create_task(self.stop())
+                self.timeout = True
+                return
+            finally:
+                await self.next.wait()
 
     def play_next(self, error=None):
         if error:

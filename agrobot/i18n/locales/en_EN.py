@@ -12,17 +12,17 @@ en_EN = {
     'error_no_bot_voice': 'I\'m not in a voice channel, what now?',
     'error_no_user_voice': 'You are not in a voice channel...',
     'error_in_bot_voice': 'I\'m already in a voice channel...',
-    'error_int_range': 'Do you know how percentages work??',
+    'error_int_range': 'Value is out of range.',
 
-    'status_not_playing': 'Nothing is playing rn.',
-    'status_enqueued': 'Here goes:',
+    'status_not_playing': 'Nothing is playing...',
+    'status_enqueued': 'Enqueued:',
     'status_volume': 'Volume set to',
 
-    'queue_empty': 'Empty queue, lmao.',
-    'queue_title': 'The Queue:',
+    'queue_empty': 'The queue is empty.',
+    'queue_title': 'The queue:',
     'queue_prev': 'Previous:',
-    'queue_page': 'Page',
-    'queue_none': 'Nothing!',
+    'queue_page': 'Page:',
+    'queue_none': 'Nothing',
 
     'na': 'Unavailable'
 }
