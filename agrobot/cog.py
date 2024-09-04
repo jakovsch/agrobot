@@ -115,10 +115,10 @@ class AgrobotMusicState:
                 .add_field(name=Strings.embed_pub,
                             value=f'[{info.uploader}]({info.uploader_url})'
                             if info.uploader_url else Strings.na)
-                .add_field(name=Strings.embed_lnk,
-                            value=f'[{Strings.embed_lnk_txt}]({info.url})'
-                            if info.url else Strings.na)
-                .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
+                # .add_field(name=Strings.embed_lnk,
+                #             value=f'[{Strings.embed_lnk_txt}]({info.url})'
+                #             if info.url else Strings.na)
+                # .add_field(name='🔊', value=f'{self.volume*100:.0f}%')
                 .set_thumbnail(url=info.thumbnail))
 
 class AgrobotMusic(commands.Cog):

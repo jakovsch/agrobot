@@ -1,4 +1,4 @@
 python-dotenv
 pynacl ~=1.5
 discord.py[voice,speed] ~=2.2
-git+https://github.com/ytdl-org/youtube-dl.git@f7ce98a21e15cb094c772e9082796d009c61578b#egg=youtube_dl
+yt-dlp ==2024.9.2.232855.dev0

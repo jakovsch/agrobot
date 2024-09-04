@@ -1,16 +1,16 @@
 import asyncio, functools
-import discord, youtube_dl
+import discord, yt_dlp
 
 from discord.ext import commands
 from agrobot.config.settings import ytdl_settings, ffmpeg_settings
 from agrobot.exceptions import YTDLError
 from agrobot.model import AudioStreamInfo
 
-youtube_dl.utils.bug_reports_message = lambda: ''
+yt_dlp.utils.bug_reports_message = lambda: ''
 
 class YTDLSource(discord.PCMVolumeTransformer):
 
-    _handler = youtube_dl.YoutubeDL(ytdl_settings)
+    _handler = yt_dlp.YoutubeDL(ytdl_settings)
     _handler.cache.remove()
 
     def __init__(
@@ -47,6 +47,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             cls._handler.extract_info, url, download=False, process=_process
         )
         data = await loop.run_in_executor(None, extractor)
+        data = cls._handler.sanitize_info(data)
 
         if data is None:
             raise YTDLError(f'Error while fetching "{url}" :/')

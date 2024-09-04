@@ -10,7 +10,7 @@ from agrobot.config.env import (
     LOCALE
 )
 
-__version__ = 0, 2, 0
+__version__ = 0, 2, 1
 
 print(r'''
     _                ___      _    
